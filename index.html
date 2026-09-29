@@ -3,145 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Center Dashboard</title>
+    <title>Datacenter Live NOC</title>
+    <!-- Εισαγωγή της βιβλιοθήκης Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Σκοτεινό θέμα (Dark Mode) */
         body {
+            background-color: #121212;
+            color: #e0e0e0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1e1e2f;
-            color: #ffffff;
             margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            background-color: #2a2a40;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-            width: 100%;
-            max-width: 400px;
+            padding: 20px;
         }
         h1 {
             text-align: center;
-            color: #4CAF50;
-            font-size: 24px;
-            margin-bottom: 25px;
+            color: #00ffcc; /* Μια νέον πράσινη/μπλε απόχρωση */
+            margin-bottom: 40px;
         }
-        label {
-            display: block;
-            margin-top: 15px;
-            font-size: 14px;
-            color: #b0b0c0;
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 20px;
         }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin-top: 5px;
-            background-color: #1e1e2f;
-            border: 1px solid #3f3f5a;
-            color: white;
-            border-radius: 5px;
-            box-sizing: border-box;
+        .chart-container {
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px;
+            width: 45%;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
         }
-        input:focus {
-            outline: none;
-            border-color: #4CAF50;
+        /* Προσαρμογή για κινητά */
+        @media (max-width: 768px) {
+            .chart-container { width: 100%; }
         }
-        button {
-            width: 100%;
-            padding: 14px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            margin-top: 25px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #result {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: center;
-            display: none;
-            font-weight: bold;
-        }
-        .healthy { background-color: #2e7d32; }
-        .warning { background-color: #f57c00; }
-        .critical { background-color: #c62828; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Server Monitor</h1>
-        <form id="metricForm">
-            <label>Server ID:</label>
-            <input type="number" id="server_id" required>
+    <h1>Datacenter Live Monitor</h1>
 
-            <label>Rack Name (π.χ. RACK-A):</label>
-            <input type="text" id="rack_name" required>
-
-            <label>CPU Usage (%):</label>
-            <input type="number" id="cpu_usage" required>
-
-            <label>Temperature (°C):</label>
-            <input type="number" id="temperature" required>
-
-            <button type="submit">Αποστολή Μετρήσεων</button>
-        </form>
-
-        <div id="result"></div>
+    <div class="dashboard">
+        <!-- Περιοχή για το Γράφημα Θερμοκρασίας -->
+        <div class="chart-container">
+            <canvas id="tempChart"></canvas>
+        </div>
+        <!-- Περιοχή για το Γράφημα CPU -->
+        <div class="chart-container">
+            <canvas id="cpuChart"></canvas>
+        </div>
     </div>
 
     <script>
-        // Αυτό το κομμάτι κώδικα "ακούει" πότε πατιέται το κουμπί
-        document.getElementById('metricForm').addEventListener('submit', async function(event) {
-            event.preventDefault(); // Σταματάει την κλασική ανανέωση της σελίδας
-
-            // Μαζεύουμε τα δεδομένα από τα κουτάκια στη μορφή "Form" που περιμένει το FastAPI
-            const formData = new URLSearchParams();
-            formData.append('server_id', document.getElementById('server_id').value);
-            formData.append('rack_name', document.getElementById('rack_name').value);
-            formData.append('cpu_usage', document.getElementById('cpu_usage').value);
-            formData.append('temperature', document.getElementById('temperature').value);
-
-            try {
-                // Χτυπάμε το τοπικό σου API
-               const response = await fetch('/servers/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-                const resultDiv = document.getElementById('result');
-                resultDiv.style.display = 'block';
-
-                // Αλλάζουμε το χρώμα του μηνύματος ανάλογα με την κατάσταση του server
-                resultDiv.className = ''; 
-                if (data.status.includes('Critical')) {
-                    resultDiv.classList.add('critical');
-                } else if (data.status.includes('Warning')) {
-                    resultDiv.classList.add('warning');
-                } else {
-                    resultDiv.classList.add('healthy');
-                }
-
-                resultDiv.innerHTML = `Κατάσταση Server: ${data.status}`;
-            } catch (error) {
-                alert('Σφάλμα σύνδεσης. Βεβαιώσου ότι το API τρέχει στο τερματικό!');
+        // Ρύθμιση του γραφήματος Θερμοκρασίας (Μπάρες)
+        const tempCtx = document.getElementById('tempChart').getContext('2d');
+        let tempChart = new Chart(tempCtx, {
+            type: 'bar',
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    label: 'Θερμοκρασία (°C)', 
+                    data: [], 
+                    backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                    borderRadius: 4
+                }] 
+            },
+            options: { 
+                responsive: true, 
+                scales: { y: { beginAtZero: true, max: 100 } },
+                plugins: { legend: { labels: { color: 'white' } } }
             }
         });
+
+        // Ρύθμιση του γραφήματος CPU (Γραμμή/Κύμα)
+        const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        let cpuChart = new Chart(cpuCtx, {
+            type: 'line',
+            data: { 
+                labels: [], 
+                datasets: [{ 
+                    label: 'Χρήση CPU (%)', 
+                    data: [], 
+                    borderColor: 'rgba(54, 162, 235, 1)', 
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)', 
+                    fill: true,
+                    tension: 0.4 // Κάνει τη γραμμή καμπυλωτή
+                }] 
+            },
+            options: { 
+                responsive: true, 
+                scales: { y: { beginAtZero: true, max: 100 } },
+                plugins: { legend: { labels: { color: 'white' } } }
+            }
+        });
+
+        // Συνάρτηση που τραβάει τα δεδομένα και ανανεώνει τα γραφήματα
+        async function fetchLiveMetrics() {
+            try {
+                // Υποθέτουμε ότι το endpoint σου είναι το /servers
+                const response = await fetch('/servers');
+                const data = await response.json();
+
+                // Διαχωρισμός των δεδομένων σε λίστες
+                const serverNames = data.map(server => server.name);
+                const temperatures = data.map(server => server.temperature);
+                const cpus = data.map(server => server.cpu_usage);
+
+                // Ενημέρωση γραφήματος θερμοκρασίας
+                tempChart.data.labels = serverNames;
+                tempChart.data.datasets[0].data = temperatures;
+                tempChart.update();
+
+                // Ενημέρωση γραφήματος CPU
+                cpuChart.data.labels = serverNames;
+                cpuChart.data.datasets[0].data = cpus;
+                cpuChart.update();
+
+            } catch (error) {
+                console.error("Σφάλμα σύνδεσης με το API:", error);
+            }
+        }
+
+        // Φόρτωσε τα δεδομένα αμέσως και μετά κάθε 5 δευτερόλεπτα (5000ms)
+        fetchLiveMetrics();
+        setInterval(fetchLiveMetrics, 5000);
     </script>
 </body>
 </html>
