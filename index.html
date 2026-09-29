@@ -98,14 +98,15 @@
         });
 
         // Συνάρτηση που τραβάει τα δεδομένα και ανανεώνει τα γραφήματα
+        // Συνάρτηση που τραβάει τα δεδομένα και ανανεώνει τα γραφήματα
         async function fetchLiveMetrics() {
             try {
-                // Υποθέτουμε ότι το endpoint σου είναι το /servers
-                const response = await fetch('/servers');
+                // Βάλαμε την κάθετο στο τέλος: /servers/
+                const response = await fetch('/servers/');
                 const data = await response.json();
 
-                // Διαχωρισμός των δεδομένων σε λίστες
-                const serverNames = data.map(server => server.name);
+                // Αλλάξαμε το server.name σε server.rack_name
+                const serverNames = data.map(server => server.rack_name);
                 const temperatures = data.map(server => server.temperature);
                 const cpus = data.map(server => server.cpu_usage);
 
