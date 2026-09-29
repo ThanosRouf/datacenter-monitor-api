@@ -2,11 +2,33 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel 
 from fastapi import FastAPI, Depends, Form
+from fastapi.responses import FileResponse
 import random
 
 # Εισάγουμε τα αρχεία που μόλις φτιάξαμε
 import models
 from database import engine, SessionLocal
+
+from fastapi import FastAPI, Form
+# Πρόσθεσε αυτή τη γραμμή στις εισαγωγές σου
+from fastapi.middleware.cors import CORSMiddleware 
+
+app = FastAPI()
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse("index.html")
+
+# Πρόσθεσε αυτό το μπλοκ κώδικα αμέσως μετά το app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Επιτρέπει την πρόσβαση από οποιαδήποτε πηγή
+    allow_credentials=True,
+    allow_methods=["*"],  # Επιτρέπει όλες τις μεθόδους (GET, POST κλπ.)
+    allow_headers=["*"],
+)
+
+# ... (εδώ συνεχίζουν τα endpoints σου) ...
 
 class ServerMetricCreate(BaseModel):
     server_id: int
@@ -17,7 +39,6 @@ class ServerMetricCreate(BaseModel):
 # Εντολή-Κλειδί: Λέμε στο SQLAlchemy να δημιουργήσει το αρχείο της βάσης και τους πίνακες!
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
 
 # Συνάρτηση για να ανοίγουμε και να κλείνουμε με ασφάλεια τη βάση σε κάθε αίτημα
 def get_db():
