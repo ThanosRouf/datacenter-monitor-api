@@ -94,6 +94,13 @@ def get_server_history(server_id: int, db: Session = Depends(get_db)):
     
     return history
 
+# Νέο endpoint για ανάκτηση ΟΛΩΝ των servers για το dashboard
+@app.get("/servers/")
+def get_all_servers(db: Session = Depends(get_db)):
+    # Ζητάμε από τη βάση όλες τις εγγραφές
+    all_servers = db.query(models.ServerMetric).all()
+    return all_servers
+
 @app.post("/servers/")
 def create_server_metric(
     server_id: int = Form(...),
