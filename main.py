@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel 
 from fastapi import FastAPI, Depends, Form
 from fastapi.responses import FileResponse
+from fastapi import FastAPI, Depends, Form, Header, HTTPException, status
 import random
 
 # Εισάγουμε τα αρχεία που μόλις φτιάξαμε
@@ -38,6 +39,18 @@ class ServerMetricCreate(BaseModel):
 
 # Εντολή-Κλειδί: Λέμε στο SQLAlchemy να δημιουργήσει το αρχείο της βάσης και τους πίνακες!
 models.Base.metadata.create_all(bind=engine)
+
+# Το μυστικό σου κλειδί (σε κανονικά projects μπαίνει σε αρχείο .env)
+SECRET_API_KEY = "my-secret-datacenter-key-2026"
+
+# Ο "Φρουρός": Συνάρτηση που ελέγχει αν το κλειδί είναι σωστό
+def verify_api_key(x_api_key: str = Header(default=None)):
+    if x_api_key != SECRET_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Πρόσβαση Απορρίφθηκε: Λάθος ή ανύπαρκτο API Key"
+        )
+    return x_api_key
 
 
 # Συνάρτηση για να ανοίγουμε και να κλείνουμε με ασφάλεια τη βάση σε κάθε αίτημα
@@ -107,7 +120,8 @@ def create_server_metric(
     rack_name: str = Form(...),
     cpu_usage: int = Form(...),
     temperature: int = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    api_key: str = Depends(verify_api_key)  # <--- ΑΥΤΗ ΕΙΝΑΙ Η ΚΛΕΙΔΑΡΙΑ
 ):
     # Υπολογίζουμε αυτόματα το status βάσει της θερμοκρασίας
     if temperature > 75:
